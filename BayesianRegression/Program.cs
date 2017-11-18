@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using MicrosoftResearch.Infer;
+using MicrosoftResearch.Infer.Distributions;
+using MicrosoftResearch.Infer.Maths;
+using MicrosoftResearch.Infer.Models;
 
 namespace BayesianRegression
 {
@@ -10,6 +10,73 @@ namespace BayesianRegression
     {
         static void Main(string[] args)
         {
+            //
+            // Challenger O-ring data
+            // Taken from: http://archive.ics.uci.edu/ml/machine-learning-databases/space-shuttle/o-ring-erosion-only.data
+            //
+
+            double[] temp = { 66, 70, 69, 68, 67, 72, 73, 70, 57, 63, 70, 78, 67, 53, 67, 75, 70, 81, 76, 79, 75, 76, 58 };
+            double[] distress = { 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+
+            // put features into array of Vectors
+            Vector[] xdata = new Vector[temp.Length];
+            for (int i = 0; i < temp.Length; i++)
+                xdata[i] = Vector.FromArray(temp[i], 1);    // including bias
+
+            //
+            // Model variables
+            //
+
+            // define a prior distribution and attach that to "w" random variable
+            VectorGaussian wPrior = new VectorGaussian(Vector.Zero(2), PositiveDefiniteMatrix.Identity(2));
+            Variable<Vector> w = Variable.Random(wPrior);
+
+            // hard-code variance
+            double noise = 0.1;
+
+            // set features "x" and observations "y" as observed in the model
+            VariableArray<double> y = Variable.Observed(distress);
+            Range n = y.Range;
+            VariableArray<Vector> x = Variable.Observed(xdata, n);
+
+            // define "y" statistically: Gaussian RV array. Mean is defined by dot-product of param vector "w" and the feature vector x[n]
+            y[n] = Variable.GaussianFromMeanAndVariance(Variable.InnerProduct(w, x[n]), noise);
+
+            //
+            // Training: parameter inference
+            //
+
+            InferenceEngine engine = new InferenceEngine();
+
+            // infer "w" posterior as a distribution
+            VectorGaussian wPosterior = engine.Infer<VectorGaussian>(w);
+            Console.WriteLine("Distribution over w = \n" + wPosterior);
+
+            //
+            // Prediction: temp = 31
+            //
+
+            // one data point
+            double tempTest = 31;
+
+            // RV for prediction
+            Variable<double> distressTest = Variable.Observed(tempTest);
+
+            // RV for feature vector
+            Vector xdataTest = Vector.FromArray(tempTest, 1);
+            Variable<Vector> xTest = Variable.Observed(xdataTest);
+
+            // set w distribution that was obtained from training
+            Variable<Vector> wParam = Variable.Random(wPosterior);
+
+            // RV for prediction
+            distressTest = Variable.GaussianFromMeanAndVariance(Variable.InnerProduct(wParam, xTest), noise);
+
+            // infer and print prediction distribution
+            Console.WriteLine("Test distress = \n" + engine.Infer(distressTest));
+
+            Console.WriteLine("Press any key ...");
+            Console.ReadKey();
         }
     }
 }
