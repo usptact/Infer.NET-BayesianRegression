@@ -32,7 +32,9 @@ namespace BayesianRegression
             Variable<Vector> w = Variable.Random(wPrior);
 
             // hard-code variance
-            double noise = 0.1;
+            Gamma noiseDist = new Gamma(1, 2);
+            Variable<double> noise = Variable.Random(noiseDist);
+            //double noise = 0.1;
 
             // set features "x" and observations "y" as observed in the model
             VariableArray<double> y = Variable.Observed(distress);
@@ -47,10 +49,13 @@ namespace BayesianRegression
             //
 
             InferenceEngine engine = new InferenceEngine();
+            engine.Compiler.RecommendedQuality = QualityBand.Experimental;
 
             // infer "w" posterior as a distribution
             VectorGaussian wPosterior = engine.Infer<VectorGaussian>(w);
+            Gamma noisePosterior = engine.Infer<Gamma>(noise);
             Console.WriteLine("Distribution over w = \n" + wPosterior);
+            Console.WriteLine("Distribution over noise = \n" + noisePosterior);
 
             //
             // Prediction: temp = 31
@@ -69,8 +74,10 @@ namespace BayesianRegression
             // set w distribution that was obtained from training
             Variable<Vector> wParam = Variable.Random(wPosterior);
 
+            Variable<double> noiseParam = Variable.Random(noisePosterior);
+
             // RV for prediction
-            distressTest = Variable.GaussianFromMeanAndVariance(Variable.InnerProduct(wParam, xTest), noise);
+            distressTest = Variable.GaussianFromMeanAndVariance(Variable.InnerProduct(wParam, xTest), noiseParam);
 
             // infer and print prediction distribution
             Console.WriteLine("Test distress = \n" + engine.Infer(distressTest));
