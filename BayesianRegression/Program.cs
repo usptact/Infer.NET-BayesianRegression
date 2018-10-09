@@ -1,8 +1,8 @@
 ﻿using System;
-using MicrosoftResearch.Infer;
-using MicrosoftResearch.Infer.Distributions;
-using MicrosoftResearch.Infer.Maths;
-using MicrosoftResearch.Infer.Models;
+using Microsoft.ML.Probabilistic.Distributions;
+using Microsoft.ML.Probabilistic.Math;
+using Microsoft.ML.Probabilistic.Models;
+
 
 namespace BayesianRegression
 {
@@ -49,7 +49,7 @@ namespace BayesianRegression
             //
 
             InferenceEngine engine = new InferenceEngine();
-            engine.Compiler.RecommendedQuality = QualityBand.Experimental;
+            engine.Compiler.RecommendedQuality = Microsoft.ML.Probabilistic.Factors.Attributes.QualityBand.Experimental;
 
             // infer "w" posterior as a distribution
             VectorGaussian wPosterior = engine.Infer<VectorGaussian>(w);
